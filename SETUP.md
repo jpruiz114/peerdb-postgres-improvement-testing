@@ -48,7 +48,7 @@ sleep 5
 **Connection Details:**
 - User: `postgres`
 - Password: `postgres`
-- Databases: `ecommerce`, `analytics`, `postgres`
+- Databases: `ecommerce`, `analytics`, `warehouse`
 
 ### 5. Create Peers in PeerDB
 
@@ -58,7 +58,7 @@ sleep 5
 
 **E-commerce Source Peer:**
 - Type: PostgreSQL
-- Name: `ecommerce_source`
+- Name: `ecommerce-source`
 - Host: `demo-source-1` (or `host.docker.internal` if PeerDB is not on the same network)
 - Port: `5432` (internal port) or `5433` (if using host.docker.internal)
 - Database: `ecommerce`
@@ -67,7 +67,7 @@ sleep 5
 
 **Analytics Source Peer:**
 - Type: PostgreSQL
-- Name: `analytics_source`
+- Name: `analytics-source`
 - Host: `demo-source-2` (or `host.docker.internal`)
 - Port: `5432` (internal port) or `5434` (if using host.docker.internal)
 - Database: `analytics`
@@ -76,10 +76,10 @@ sleep 5
 
 **Destination Peer:**
 - Type: PostgreSQL
-- Name: `dest`
+- Name: `ecommerce-dest`
 - Host: `demo-dest` (or `host.docker.internal`)
 - Port: `5432` (internal port) or `5435` (if using host.docker.internal)
-- Database: `postgres`
+- Database: `warehouse`
 - User: `postgres`
 - Password: `postgres`
 

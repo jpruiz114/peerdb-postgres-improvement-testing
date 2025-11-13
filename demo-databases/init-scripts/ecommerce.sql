@@ -109,7 +109,161 @@ JOIN users u ON o.user_id = u.id
 LEFT JOIN order_items oi ON o.id = oi.order_id
 GROUP BY o.id, u.email, u.first_name, u.last_name, o.total_amount, o.status, o.created_at;
 
+-- ============================================
+-- TRIGGERS
+-- ============================================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to auto-update updated_at on users table
+CREATE TRIGGER trigger_update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to auto-update updated_at on products table
+CREATE TRIGGER trigger_update_products_updated_at
+    BEFORE UPDATE ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to auto-update updated_at on orders table
+CREATE TRIGGER trigger_update_orders_updated_at
+    BEFORE UPDATE ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Function to update stock quantity when order items are inserted
+CREATE OR REPLACE FUNCTION update_product_stock_on_order()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Decrease stock when order item is added
+    UPDATE products
+    SET stock_quantity = stock_quantity - NEW.quantity
+    WHERE id = NEW.product_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update stock when order items are created
+CREATE TRIGGER trigger_update_stock_on_order_item
+    AFTER INSERT ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION update_product_stock_on_order();
+
+-- Function to recalculate order total when order items change
+CREATE OR REPLACE FUNCTION recalculate_order_total()
+RETURNS TRIGGER AS $$
+DECLARE
+    new_total DECIMAL(10, 2);
+BEGIN
+    -- Calculate new total from all order items
+    SELECT COALESCE(SUM(quantity * price), 0)
+    INTO new_total
+    FROM order_items
+    WHERE order_id = COALESCE(NEW.order_id, OLD.order_id);
+    
+    -- Update the order total
+    UPDATE orders
+    SET total_amount = new_total
+    WHERE id = COALESCE(NEW.order_id, OLD.order_id);
+    
+    RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to recalculate order total when order items are inserted
+CREATE TRIGGER trigger_recalculate_total_on_insert
+    AFTER INSERT ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION recalculate_order_total();
+
+-- Trigger to recalculate order total when order items are updated
+CREATE TRIGGER trigger_recalculate_total_on_update
+    AFTER UPDATE ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION recalculate_order_total();
+
+-- Trigger to recalculate order total when order items are deleted
+CREATE TRIGGER trigger_recalculate_total_on_delete
+    AFTER DELETE ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION recalculate_order_total();
+
+-- Function to log order status changes for audit
+CREATE OR REPLACE FUNCTION log_order_status_change()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        -- In a real system, you'd insert into an audit table
+        -- For demo purposes, we'll just raise a notice
+        RAISE NOTICE 'Order % status changed from % to %', NEW.id, OLD.status, NEW.status;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to log order status changes
+CREATE TRIGGER trigger_log_order_status_change
+    AFTER UPDATE OF status ON orders
+    FOR EACH ROW
+    WHEN (OLD.status IS DISTINCT FROM NEW.status)
+    EXECUTE FUNCTION log_order_status_change();
+
+-- Function to validate order item quantity
+CREATE OR REPLACE FUNCTION validate_order_item_quantity()
+RETURNS TRIGGER AS $$
+DECLARE
+    available_stock INTEGER;
+BEGIN
+    -- Check if enough stock is available
+    SELECT stock_quantity INTO available_stock
+    FROM products
+    WHERE id = NEW.product_id;
+    
+    IF available_stock < NEW.quantity THEN
+        RAISE EXCEPTION 'Insufficient stock. Available: %, Requested: %', available_stock, NEW.quantity;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to validate order item quantity before insert
+CREATE TRIGGER trigger_validate_order_item_quantity
+    BEFORE INSERT ON order_items
+    FOR EACH ROW
+    EXECUTE FUNCTION validate_order_item_quantity();
+
+-- Function to update user last activity timestamp
+CREATE OR REPLACE FUNCTION update_user_last_activity()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Update user's updated_at when they place an order
+    UPDATE users
+    SET updated_at = CURRENT_TIMESTAMP
+    WHERE id = NEW.user_id;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update user activity when order is created
+CREATE TRIGGER trigger_update_user_activity_on_order
+    AFTER INSERT ON orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_user_last_activity();
+
 -- Grant permissions
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO postgres;
 
