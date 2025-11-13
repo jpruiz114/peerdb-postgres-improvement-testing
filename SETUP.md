@@ -113,6 +113,36 @@ export GOROOT="$HOME/.local/go"
 sudo apt install postgresql-client-common
 ```
 
+### Install golangci-lint (for code linting)
+
+To check for linting issues locally before pushing code:
+
+```bash
+# Install golangci-lint v2.5.0 (matching CI version)
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.5.0
+
+# Add to PATH (add to ~/.bashrc or ~/.zshrc to make permanent)
+export PATH="$(go env GOPATH)/bin:$PATH"
+```
+
+**Running the linter:**
+
+From the main PeerDB repository (`/home/derp-derpson/dev/peerdb`):
+
+```bash
+# Run linter on flow directory
+cd flow
+golangci-lint run --timeout=10m
+
+# Auto-fix issues where possible
+golangci-lint run --fix --timeout=10m
+
+# Check specific files/directories
+golangci-lint run --timeout=10m ./connectors/postgres/...
+```
+
+The linter configuration is in `flow/.golangci.yml` and matches what runs in CI.
+
 ## Web UI
 
 Access PeerDB UI at: http://localhost:3000

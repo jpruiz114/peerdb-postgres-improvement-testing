@@ -1,0 +1,60 @@
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment files
+.env
+.env.local
+.envrc
+*.env
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+*.backup
+*.old
+
+# Docker volumes and data (if created locally)
+docker-volumes/
+postgres-data/
+*.sql.dump
+*.sql.backup
+
+# Test output and coverage
+coverage/
+test-results/
+*.out
+
+# Generated files
+generated/
+*.generated.*
+
+# Local configuration overrides
+docker-compose.override.yml
+docker-compose.local.yml
+
