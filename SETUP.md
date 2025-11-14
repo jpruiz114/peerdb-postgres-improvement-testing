@@ -1,10 +1,15 @@
 # PeerDB Setup Guide
 
+**Note**: All commands in this guide should be run from the main PeerDB repository directory (`/home/derp-derpson/dev/peerdb`), not from this documentation directory.
+
 ## Quick Start
 
 ### 1. Run PeerDB
 
 ```bash
+# Navigate to the main PeerDB directory
+cd /home/derp-derpson/dev/peerdb
+
 # Run PeerDB in Docker (uses pre-built images)
 bash ./run-peerdb.sh
 
@@ -26,12 +31,13 @@ psql "port=9900 host=localhost password=peerdb"
 ### 3. Setup Demo Databases
 
 ```bash
-# Start demo PostgreSQL databases
-cd demo-databases
+# From the main PeerDB directory, start demo PostgreSQL databases
+cd /home/derp-derpson/dev/peerdb/demo-databases
 docker compose -f docker-compose-demo-dbs.yml up -d
 
 # Wait a few seconds for databases to initialize
 sleep 5
+cd ..
 ```
 
 ### 4. Access Demo Databases
@@ -152,12 +158,16 @@ All peer and mirror creation should be done through the Web UI.
 ## Stopping Services
 
 ```bash
+# From the main PeerDB directory
+cd /home/derp-derpson/dev/peerdb
+
 # Stop PeerDB
-docker compose down
+docker compose -f docker-compose-dev.yml down
 
 # Stop demo databases
 cd demo-databases
 docker compose -f docker-compose-demo-dbs.yml down
+cd ..
 ```
 
 ## Complete Clean Slate Rebuild
@@ -165,16 +175,18 @@ docker compose -f docker-compose-demo-dbs.yml down
 To completely recreate everything (PeerDB and demo databases) from scratch:
 
 ```bash
-# From the project root directory
-docker compose -f docker-compose-dev.yml down -v && \
-cd demo-databases && \
-docker compose -f docker-compose-demo-dbs.yml down -v && \
-cd .. && \
-bash ./generate-protos.sh && \
-bash ./dev-peerdb.sh & \
-sleep 10 && \
-cd demo-databases && \
-docker compose -f docker-compose-demo-dbs.yml up -d
+# From the main PeerDB directory
+cd /home/derp-derpson/dev/peerdb
+
+# Stop and remove everything (including volumes/data)
+docker compose -f docker-compose-dev.yml down -v
+cd demo-databases && docker compose -f docker-compose-demo-dbs.yml down -v && cd ..
+
+# Rebuild and start
+bash ./generate-protos.sh  # Only if protobuf files changed
+bash ./dev-peerdb.sh &
+sleep 10
+cd demo-databases && docker compose -f docker-compose-demo-dbs.yml up -d && cd ..
 ```
 
 **What this does:**
