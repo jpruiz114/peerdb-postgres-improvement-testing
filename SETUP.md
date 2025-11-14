@@ -15,7 +15,7 @@ bash ./run-peerdb.sh
 
 # OR for local development (rebuilds from local code)
 bash ./generate-protos.sh  # First time only - requires buf and go
-bash ./dev-peerdb.sh
+docker compose -f docker-compose-dev.yml up -d --build
 ```
 
 ### 2. Access PeerDB Web UI
@@ -184,7 +184,7 @@ cd demo-databases && docker compose -f docker-compose-demo-dbs.yml down -v && cd
 
 # Rebuild and start
 bash ./generate-protos.sh  # Only if protobuf files changed
-bash ./dev-peerdb.sh &
+docker compose -f docker-compose-dev.yml up -d --build
 sleep 10
 cd demo-databases && docker compose -f docker-compose-demo-dbs.yml up -d && cd ..
 ```
@@ -199,6 +199,60 @@ cd demo-databases && docker compose -f docker-compose-demo-dbs.yml up -d && cd .
 **Note**: This deletes all data. Use this when you want a completely fresh start.
 
 **After running this**: You may need to create the Temporal search attribute (see Troubleshooting section below).
+
+## Complete Wipe (Remove All Peers and Mirrors)
+
+To completely wipe everything including all peers, mirrors, and configuration data:
+
+```bash
+# From the main PeerDB directory
+cd /home/derp-derpson/dev/peerdb
+
+# 1. Stop and remove ALL containers and volumes (this wipes peers/mirrors)
+docker compose -f docker-compose-dev.yml down -v
+
+# 2. Stop and remove demo database containers and volumes
+cd demo-databases
+docker compose -f docker-compose-demo-dbs.yml down -v
+cd ..
+
+# 3. Optional: Verify volumes are gone (should show nothing related to peerdb)
+docker volume ls | grep -E "peerdb|demo"
+
+# 4. Rebuild and start everything fresh
+bash ./generate-protos.sh  # Only if protobuf files changed
+docker compose -f docker-compose-dev.yml up -d --build
+sleep 15  # Give it a bit more time to fully start
+
+# 5. Start demo databases
+cd demo-databases
+docker compose -f docker-compose-demo-dbs.yml up -d
+cd ..
+```
+
+**What gets wiped:**
+- `pgdata` - PeerDB catalog database (contains all peers, mirrors, and configuration)
+- `minio-data` - MinIO object storage data
+- `demo-source-1-data` - E-commerce demo database
+- `demo-source-2-data` - Analytics demo database
+- `demo-dest-data` - Warehouse demo database
+
+**After rebuild:**
+1. Wait for PeerDB to be ready (check logs: `docker logs peerdb-server`)
+2. Access UI: http://localhost:3000
+3. Create peers again (they'll be gone)
+4. Create mirrors again (they'll be gone)
+
+**Quick one-liner:**
+```bash
+cd /home/derp-derpson/dev/peerdb && \
+docker compose -f docker-compose-dev.yml down -v && \
+cd demo-databases && docker compose -f docker-compose-demo-dbs.yml down -v && cd .. && \
+bash ./generate-protos.sh && \
+docker compose -f docker-compose-dev.yml up -d --build && \
+sleep 15 && \
+cd demo-databases && docker compose -f docker-compose-demo-dbs.yml up -d && cd ..
+```
 
 ## Troubleshooting
 
